@@ -1,0 +1,26 @@
+{
+  "name": "comms",
+  "version": "0.0.1",
+  "description": "Basic IPC comms",
+  "main": "comms.js",
+  "scripts": {
+    "test": "mocha -R spec"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/casetext/comms.git"
+  },
+  "author": "daguej",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/casetext/comms/issues"
+  },
+  "homepage": "https://github.com/casetext/comms",
+  "dependencies": {
+    "json-over-tcp": "^0.3.2"
+  },
+  "devDependencies": {
+    "chai": "^2.1.1",
+    "mocha": "^2.2.1"
+  }
+}
