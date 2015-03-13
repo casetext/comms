@@ -21,7 +21,7 @@ Each `Comms` instance represents a messaging channel.  The channel can run in se
 
 Starts a server on `port`.
 
-### `connect(host, port, cb)`
+### `connect(port, host, cb)`
 
 Connects to a server.  `cb` when first connected.
 
@@ -38,6 +38,12 @@ Emitted when a message of `type` is received.
 
 - `type` - the type of message
 - `cb(msg, socket)` - the callback to invoke.  `socket` is a reference to the sender's socket.  On the server, you can use this to `send` a message back to only one client.
+
+Comms also emits a few socket bookkeeping events.  The one argument passed to the event handler is the `socket`.
+
+- `connection` - fired when the server receives a new client
+- `connected` - fired when the client (re)connects
+- `disconnected` - fired when the server or client disconnects
 
 ### `close(cb)`
 

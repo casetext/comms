@@ -4,6 +4,9 @@ var jot = require('json-over-tcp'),
 
 
 function Comms(opts) {
+	if (!(this instanceof Comms)) {
+		return new Comms(opts);
+	}
 	events.EventEmitter.call(this);
 	this.clients = {};
 	this.opts = opts || {};
@@ -57,6 +60,7 @@ Comms.prototype.connect = function(port, host, cb) {
 
 	client.on('connect', function() {
 		client.connected = true;
+		self.emit('connected', client);
 	});
 	client.on('close', function() {
 		client.connected = false;
@@ -117,6 +121,7 @@ function wire(socket, instance) {
 	instance.clients[idOf(socket)] = socket;
 	socket.on('close', function() {
 		delete instance.clients[idOf(socket)];
+		instance.emit('disconnected', socket);
 	});
 
 	socket.on('data', function(msg) {
