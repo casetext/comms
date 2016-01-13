@@ -14,15 +14,19 @@ function Comms(opts) {
 util.inherits(Comms, events.EventEmitter);
 
 function send(type, msg) {
-	msg = msg || {};
-	msg.msg = type;
-	this.write(msg);
+	this.write({
+		t: type,
+		m: msg || {}
+	});
 }
 
 Comms.prototype.send = send;
 
 Comms.prototype.write = function(msg) {
 	if (this.server) {
+		if (this._relay) {
+			this._relay.socket.write(msg);
+		}
 		for (var k in this.clients) {
 			this.clients[k].write(msg);
 		}
@@ -78,6 +82,40 @@ Comms.prototype.connect = function(port, host, cb) {
 
 };
 
+Comms.prototype.relay = function(port, host) {
+	var self = this;
+	if (port) {
+		var relay = self._relay = {
+			port: port,
+			host: host,
+			socket: jot.connect(port, host)
+		};
+
+		relay.socket.on('error', function(err) {
+			// ignore
+		});
+		relay.socket.on('connect', function() {
+			relay.connected = true;
+		});
+		relay.socket.on('close', function() {
+			relay.connected = false;
+			if (!self.closing) {
+				relay.retryAttempt = 0;
+				reconnectRelay(self);
+			}
+		});
+
+		setupRelay(self);
+	} else {
+		if (self._relay) {
+			clearReconnectRelay(self);
+			self._relay.socket.removeAllListeners();
+			self._relay.socket.close();
+		}
+		self._relay = null;
+	}
+};
+
 function reconnect(instance) {
 	instance._retry.timer = setTimeout(function() {
 		if (!instance.closing) {
@@ -92,12 +130,28 @@ function clearReconnect(instance) {
 	}
 }
 
+function reconnectRelay(instance) {
+	if (instance._relay) {
+		instance._relay.retryTimer = setTimeout(function() {
+			instance.relay(instance._relay.port, instance._relay.host);
+		}, Math.min(Math.pow(2, ++instance._relay.retryAttempt) + 100, 60000));
+	}
+}
+function clearReconnectRelay(instance) {
+	if (instance._relay) {
+		clearTimeout(instance._relay.retryTimer);
+	}
+}
+
 Comms.prototype.close = function(cb) {
 	this.closing = true;
 	if (this.server) {
 		this.server.close(cb);
 		for (var k in this.clients) {
 			this.clients[k].destroy();
+		}
+		if (this._relay) {
+			this.relay();
 		}
 	} else if (this.client) {
 		clearReconnect(this);
@@ -125,11 +179,39 @@ function wire(socket, instance) {
 	});
 
 	socket.on('data', function(msg) {
-		instance.emit(msg.msg, msg, socket);
+		instance.emit('message', msg, socket);
+		instance.emit(msg.t, msg.m, socket);
 	});
 
 	socket.send = send;
 }
+
+function setupRelay(instance) {
+	var relay = instance._relay;
+	relay.socket.on('data', function(msg) {
+		if (msg.t) {
+			instance.emit(msg.t, msg.m, new RelayedClient(instance, msg.id));
+		} else if (msg.nc) {
+			instance.emit('connection', new RelayedClient(instance, msg.nc));
+		} else if (msg.dc) {
+			instance.emit('disconnected', new RelayedClient(instance, msg.dc));
+		}
+	});
+}
+
+function RelayedClient(instance, id) {
+	this.instance = instance;
+	this.id = id;
+}
+RelayedClient.prototype.send = function(type, message) {
+	if (this.instance._relay) {
+		this.instance._relay.socket.write({
+			id: this.id,
+			t: type,
+			m: message || {}
+		});
+	}
+};
 
 function idOf(socket) {
 	return socket.remoteAddress + ':' + socket.remotePort;

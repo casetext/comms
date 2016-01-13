@@ -1,8 +1,11 @@
 {
   "name": "comms",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "Basic IPC comms",
   "main": "comms.js",
+  "bin": {
+    "comms-relay": "./relay.js"
+  },
   "scripts": {
     "test": "mocha -R spec"
   },
@@ -17,7 +20,8 @@
   },
   "homepage": "https://github.com/casetext/comms",
   "dependencies": {
-    "json-over-tcp": "^0.3.2"
+    "json-over-tcp": "^0.3.2",
+    "yargs": "^3.31.0"
   },
   "devDependencies": {
     "chai": "^2.1.1",
