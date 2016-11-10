@@ -38,7 +38,14 @@ Comms.prototype.write = function(msg) {
 };
 
 Comms.prototype.listen = function(port) {
-	var self = this, server = this.server = jot.createServer(port);
+	var self = this, server;
+	
+	if (typeof port === 'number') {
+		server = this.server = jot.createServer();
+	} else {
+		server = this.server = jot.createServer(port);
+	}
+
 	server.on('connection', function(socket) {
 		socket.on('error', function(err) {
 			// ignore
